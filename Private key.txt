@@ -20,3 +20,6 @@ then check on web browser 196.188.250.164:8888
 To schedule everytime logs
 * * * * * /bin/date >> /home/dawit1/log_time.txt
 
+
+to check used port ss -ltnup 
+
