@@ -1,0 +1,17 @@
+to Create SSH from network set on Port forwarding private port 22 and public port 9191  and on firewall 0.0.0.0/0 of Source CIDR and start port 9191 and end port 9191 or custome port.
+To access the remote ssh
+ssh root@196.188.250.164 -p 9191
+
+To share public private key 
+First we have to go our local powershell 
+key-gen to generate the private key 
+then based on the path or xl file copy the private key and go to ssh server 
+nano .ssh/authorized_keys then paste on it save and check
+
+
+to copy file from local computer to remote unprivilaged user 
+scp -P 9191 Privatekey.txt dawit2@196.188.250.164:/home/dawit2/Privatekey.txt
+
+appache install and run using IP address and port set 80 for private port and 8888 custom port for public and 0.0.0.0/0 for CIDR and start and end port 8888
+then sudo ufw allow 80/tcp 
+then check on web browser 196.188.250.164:8888
