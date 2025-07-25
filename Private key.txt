@@ -23,3 +23,100 @@ To schedule everytime logs
 
 to check used port ss -ltnup 
 
+systat -u to check CPU status 
+sar -r to check memory status 
+sar -b to check disk status
+sar -s with specfic time we can see specfic time status
+
+netstat or ss to show listing and non listing porsts (tcp/udp)
+netstat -tuln     # Show listening TCP/UDP ports
+netstat -an       # Show all connections (numeric)
+netstat -rn       # Show routing table
+netstat -p        # Show PID and program name
+
+The `free` command in Linux is used to display the amount of **free and used memory** in the system. It shows information about **RAM and swap usage**, as well as **buffers and cache** used by the kernel.
+
+### Common Options:
+
+* `-h` : Human-readable format (e.g., in KB, MB, GB).
+* `-m` : Show output in megabytes.
+* `-g` : Show output in gigabytes.
+* `-b` : Show output in bytes.
+* `-t` : Show total of all memory (RAM + swap).
+* `-s [seconds]` : Continuously display the memory status every \[seconds].
+
+###############################################################################################################################################
+The `df` command in Linux is used to **report disk space usage** of file systems.
+### 🔹 **Commonly Used Options**:
+
+* `-h` : Human-readable format (e.g., KB, MB, GB)
+* `-T` : Show file system type
+* `-a` : Include pseudo, duplicate, inaccessible file systems
+* `-i` : Show inode information instead of block usage
+################################################################################################################################################
+Sure! Here’s the **concise command-only version** for **Debian/Ubuntu** to **expand root partition** using unused space:
+
+---
+
+### ✅ Check disk
+
+```bash
+sudo fdisk -l
+```
+
+---
+
+### ✅ Resize partition
+
+```bash
+sudo fdisk /dev/sda
+# Inside fdisk:
+# p  → print partitions
+# d  → delete partition (e.g., 1)
+# n  → new partition (same number)
+# First sector: same as before
+# Last sector: press Enter
+# w  → write and exit
+```
+
+---
+
+### ✅ Reboot
+
+```bash
+sudo reboot
+```
+
+---
+
+### ✅ Resize filesystem (ext4)
+
+```bash
+sudo resize2fs /dev/sda1
+```
+### ✅ Check result
+
+```bash
+df -h
+```
+###################################################################################################################################################################3
+sudo du -h -d 1 /usr
+```
+Displays the **disk usage** of each **top-level subdirectory** inside `/usr` in **human-readable** format (e.g., MB/GB).
+##################################################################################################################################################################
+lsof
+```
+Lists all **open files** by processes — useful for finding which files, sockets, or devices are in use.
+###################################################################################################################################################################
+**ping** is a network diagnostic tool used to test the reachability of a host on an IP network. It sends ICMP echo request packets and waits for a reply.
+
+**Common options:**
+
+* **-c**: Specifies the number of packets to send. Example: `-c 4` sends 4 pings.
+* **-i**: Sets the interval (in seconds) between packets. Default is 1 second.
+* **-t**: Sets the time to live (TTL), which limits the number of hops a packet can take.
+* **-s**: Defines the packet size in bytes.
+* **-4 / -6**: Forces the use of IPv4 or IPv6.
+
+##################################################################################################################################################################
+
