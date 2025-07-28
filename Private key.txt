@@ -58,6 +58,7 @@ Sure! Here’s the **concise command-only version** for **Debian/Ubuntu** to **e
 
 ---
 
+
 ### ✅ Check disk
 
 ```bash
@@ -119,4 +120,84 @@ Lists all **open files** by processes — useful for finding which files, socket
 * **-4 / -6**: Forces the use of IPv4 or IPv6.
 
 ##################################################################################################################################################################
+**Fail2Ban** is a popular open-source intrusion prevention tool used to enhance server security. It monitors log files (e.g., `/var/log/auth.log`, `/var/log/nginx/error.log`) to detect patterns of suspicious activity such as failed login attempts, and then automatically takes action—usually by updating firewall rules to temporarily or permanently ban offending IP addresses.
+
+### Key Features:
+
+* **Brute-force protection**: Commonly protects services like SSH, FTP, SMTP, and web servers from brute-force attacks.
+* **Configurable jails**: “Jails” define how Fail2Ban monitors specific services and what action to take.
+* **Ban automation**: Offending IPs can be banned for a set duration or permanently.
+* **Log-based detection**: Uses regex patterns to identify malicious behavior in log files.
+* **Custom actions**: Can trigger firewall rules, send email alerts, or even run custom scripts.
+
+### Common Use Cases:
+
+* Protecting SSH access from brute-force attacks.
+* Blocking repeated failed login attempts on websites or mail servers.
+* Mitigating DDoS or bot-based scanning attempts.
+
+### Example Command:
+
+```bash
+sudo fail2ban-client status sshd
+```
+
+This shows the status of the `sshd` jail, including how many IPs have been banned.
+
+Would you like a configuration example or how to install and enable it on Ubuntu or CentOS?
+########################################################################################################################################################
+**Logrotate** is a system utility in Unix/Linux used to manage the automatic rotation, compression, removal, and mailing of log files. It helps prevent log files from consuming excessive disk space and keeps the system organized by managing old logs efficiently.
+
+---
+
+### 🔧 **Key Features of Logrotate:**
+
+* **Automatic log rotation** based on size or time (daily, weekly, monthly).
+* **Compression** of old log files (e.g., `.gz`) to save space.
+* **Custom retention policies** (e.g., keep last 4 logs, delete older).
+* **Pre/post rotation scripts** (e.g., restart services after rotation).
+* **Supports multiple configurations** via `/etc/logrotate.d/`.
+
+---
+
+### 📁 **Configuration Files:**
+
+* **Global config**: `/etc/logrotate.conf`
+* **Per-service config**: `/etc/logrotate.d/` (e.g., `/etc/logrotate.d/nginx`)
+
+---
+
+### ✅ **Example Configuration:**
+
+```bash
+/var/log/nginx/*.log {
+    daily
+    rotate 14
+    compress
+    missingok
+    notifempty
+    postrotate
+        systemctl reload nginx > /dev/null 2>&1 || true
+    endscript
+}
+```
+
+This rotates NGINX logs **daily**, keeps **14 old logs**, **compresses** them, and reloads NGINX after rotation.
+
+---
+
+### 📌 **Manual Trigger:**
+
+To force log rotation:
+
+```bash
+sudo logrotate -f /etc/logrotate.conf
+```
+
+To test with verbose output:
+
+```bash
+sudo logrotate -d /etc/logrotate.conf
+```
+###########################################################################################################################################################################
 
