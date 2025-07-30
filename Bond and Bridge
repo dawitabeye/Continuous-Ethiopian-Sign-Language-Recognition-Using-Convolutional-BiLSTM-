@@ -1,0 +1,70 @@
+Got it! Here's a **detailed explanation of Proxmox network configuration using bond + bridge via the GUI (Web Interface)** — ideal for note-taking or `.txt` documentation:
+
+---
+
+### 🖥️ Proxmox GUI: Network Configuration (Bond + Bridge)
+
+#### 🔹 Step 1: Open Network Settings
+
+* Login to **Proxmox Web GUI**.
+* In the **left panel**, select your **Proxmox node** (e.g., `pve`).
+* Go to **Datacenter > Node > System > Network**.
+
+---
+
+#### 🔹 Step 2: Create a Bond
+
+1. Click **"Create" > "Linux Bond"**.
+2. Fill in:
+
+   * **Name**: `bond0` (or other name).
+   * **Slaves**: Select at least 2 physical NICs (e.g., `eno1`, `eno2`).
+   * **Bond Mode**: Choose depending on your need:
+
+     * `Active Backup (mode 1)` → simple failover, no switch config required.
+     * `LACP (802.3ad, mode 4)` → load balancing + redundancy; needs switch support.
+   * Leave **Xmit Hash Policy**, **Miimon**, and others at default unless advanced setup.
+3. Click **"OK"** to create the bond.
+
+---
+
+#### 🔹 Step 3: Create a Bridge
+
+1. Click **"Create" > "Linux Bridge"**.
+2. Fill in:
+
+   * **Name**: `vmbr0` (default bridge name in Proxmox).
+   * **Bridge Ports**: Select your bond interface (e.g., `bond0`).
+   * **IPv4/CIDR**: Example: `192.168.1.100/24`.
+   * **Gateway (IPv4)**: e.g., `192.168.1.1`.
+   * **IPv6**: Leave disabled unless used.
+3. Click **"OK"** to save the bridge.
+
+---
+
+#### 🔹 Step 4: Apply and Confirm
+
+* You’ll see both `bond0` and `vmbr0` listed.
+* Click **"Apply Configuration"** or **"Reboot"** if prompted.
+* A warning will appear if you’re connected via web — confirm and wait for reconnection.
+* Use **local console (shell/monitor)** if you're unsure, to prevent being locked out.
+
+---
+
+#### ✅ Result
+
+* Now, `bond0` handles traffic through two NICs.
+* `vmbr0` acts as a virtual switch connecting VMs to the bonded NICs.
+* VMs should use `vmbr0` as their **bridge interface**.
+
+---
+
+#### 🧠 Notes
+
+* **Bonding mode 1** (Active Backup) is safest for simple setups.
+* **LACP (mode 4)** requires switch ports to be in **LAG**/LACP group.
+* Avoid misconfiguring NICs currently used by the web interface — it may cause disconnect.
+
+---
+
+Let me know if you want screenshots or step-by-step for a specific scenario (e.g., 3 NICs, VLANs, etc.).
