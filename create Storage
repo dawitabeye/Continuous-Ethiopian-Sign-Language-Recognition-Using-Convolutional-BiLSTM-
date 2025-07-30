@@ -1,1 +1,23 @@
+Add and Format New Volume on Instance
 
+1. Check available disks:
+   lsblk
+   (e.g., existing disk: vda, new volume: vdb)
+
+2. Create partition on new volume:
+   sudo cfdisk /dev/vdb
+   - Select GPT if prompted
+   - Create new partition, then Write and Quit
+
+3. Format the new partition:
+   sudo mkfs.ext4 /dev/vdb1
+
+4. (Optional) Mount the new partition:
+   sudo mkdir /mnt/data
+   sudo mount /dev/vdb1 /mnt/data
+
+5. (Optional) Make the mount permanent:
+   sudo blkid        # Get UUID of /dev/vdb1
+   sudo nano /etc/fstab
+   Add this line at the end:
+   UUID=xxxx-xxxx  /mnt/data  ext4  defaults  0  2
