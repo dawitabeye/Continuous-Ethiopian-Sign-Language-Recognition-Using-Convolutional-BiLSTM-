@@ -1,0 +1,31 @@
+PVS
+VGS
+lvs
+root@ghost:~# lvextend -l +100%free /dev/pve/root
+resize2fs /dev/pve/root
+###############################################################################################################
+# View Physical Volumes
+pvs
+# Description: Displays information about physical volumes used in LVM. 
+# Shows device name, volume group (VG) it belongs to, size, and available space.
+
+# View Volume Groups
+vgs
+# Description: Shows information about volume groups.
+# Displays VG name, number of physical volumes (PVs), logical volumes (LVs), total and free space.
+
+# View Logical Volumes
+lvs
+# Description: Lists logical volumes, their VG, size, and other properties.
+
+# Extend Logical Volume to Use All Free Space
+lvextend -l +100%FREE /dev/pve/root
+# Description: Increases the size of the logical volume '/dev/pve/root' using all unallocated space in the volume group.
+
+# Resize the Filesystem After Extending the LV
+resize2fs /dev/pve/root
+# Description: Resizes the ext4 filesystem on the logical volume to match the newly increased LV size.
+
+# Note:
+# If the filesystem is XFS instead of ext4, use:
+# xfs_growfs /
