@@ -1,0 +1,88 @@
+Sure! Here's the same **step-by-step Proxmox VM creation guide**, rewritten in **plain text format** (suitable for saving in a `.txt` file) without formatting symbols like bold, emojis, or indentation — perfect for documentation or offline use.
+
+---
+
+```
+Proxmox VE - Step-by-Step VM Creation Guide
+============================================
+
+1. Access Proxmox VE Web Interface
+-----------------------------------
+- URL: https://your-proxmox-ip:8006
+- Login with root or a user account with sufficient privileges.
+- On the left panel, select the Proxmox node (host server).
+- Click "Create VM" on the top right corner.
+
+2. General Tab
+--------------
+- Node: Automatically selected.
+- VM ID: Auto-generated or you can set manually.
+- Name: Name of the virtual machine (e.g., ubuntu-server).
+- Start after created: Optional checkbox to start the VM after creation.
+
+3. OS Tab
+---------
+- ISO Image: Select the ISO you uploaded to local storage.
+- Guest OS Type: Choose from Linux, Windows, or Other.
+- Guest OS Version: Choose the appropriate version to optimize virtualization settings.
+
+4. System Tab
+-------------
+- BIOS:
+  - SeaBIOS: For legacy BIOS support.
+  - OVMF (UEFI): For modern UEFI systems.
+- Machine:
+  - i440fx (default)
+  - q35 (used for UEFI and passthrough)
+- EFI Disk: Required for UEFI. Stores NVRAM (enable if using OVMF).
+- Add TPM: Optional, required for Windows 11.
+- SCSI Controller: VirtIO SCSI (recommended for best performance).
+
+5. Hard Disk Tab
+----------------
+- Bus/Device: Choose SCSI, VirtIO Block, or IDE.
+- Storage: Choose the target storage (e.g., local-lvm, local).
+- Disk Size: Size of the virtual disk in GB (e.g., 32).
+- Discard: Enable TRIM support (for SSDs, optional).
+- Cache: Default (No Cache) is safest; write-back can improve performance but may risk data loss.
+
+6. CPU Tab
+----------
+- Sockets: Number of CPU sockets (usually 1).
+- Cores: Number of cores (e.g., 2, 4).
+- Type: 'host' is best for performance.
+- Enable NUMA: Optional (for NUMA-aware apps).
+- CPU Limit and CPU Units: Optional fine-tuning settings.
+
+7. Memory Tab
+-------------
+- Memory (MB): Set the total RAM for the VM (e.g., 4096 for 4GB).
+- Ballooning Device: Optional. Allows Proxmox to adjust memory dynamically.
+
+8. Network Tab
+--------------
+- Bridge: Select a bridge interface (usually vmbr0).
+- Model: Choose VirtIO (for performance) or Intel E1000 (for compatibility).
+- MAC Address: Auto-generated or enter manually.
+- Firewall: Enable if using Proxmox firewall.
+- VLAN Tag: Optional (used for VLAN-separated traffic).
+
+9. Confirm Tab
+--------------
+- Review all the selected configuration options.
+- Click "Finish" to create the VM.
+
+After VM Creation
+------------------
+- VM will appear in the left sidebar.
+- Select the VM and go to the "Console" tab.
+- Power on the VM and proceed with the operating system installation using the selected ISO.
+
+Optional Post-Creation Configuration
+-------------------------------------
+- Add additional hardware (e.g., USB, TPM, GPU).
+- Configure backups and replication.
+- Setup cloud-init if needed for automated VM provisioning.
+
+End of Guide
+#################################################################################################################################################
