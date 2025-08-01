@@ -1,173 +1,111 @@
-Proxmox Virtualization and Backup Setup
-=======================================
+# Proxmox VE + Onsite PBS + Offsite PBS Setup Guide
+# =================================================
+# Assumptions:
+# - 1 PVE host: IP 192.168.100.10
+# - 1 Onsite PBS: IP 192.168.100.20
+# - 1 Offsite PBS: IP 10.10.10.20
+# - All systems use ZFS with RAIDZ
+# - Datastore name: main-pbs01-backup
+# - Namespace: main-pbs01-backup-ns
 
-Overview
---------
-This setup describes a data center configuration using Proxmox VE (PVE) for running production workloads 
-and Proxmox Backup Server (PBS) for managing secure, incremental backups. ZFS is used on both PVE and PBS 
-for redundancy and performance using RAIDZ. Backups are organized under a dedicated namespace and are 
-synchronized to an offsite location for disaster recovery.
+# ---------- Step 1: Prepare PVE ----------
+# Ensure ZFS pool for VMs exists
+zpool create main-pve01-vm raidz /dev/sdX /dev/sdY /dev/sdZ
 
-Setup Components
-----------------
+# ---------- Step 2: Onsite PBS Setup ----------
+# Create ZFS pool for backup storage
+zpool create zfs-pool-01 raidz /dev/sdX /dev/sdY /dev/sdZ
 
-1. Proxmox VE (PVE)
-   - Role: Primary virtualization host
-   - Purpose: Hosts critical applications and services using VMs and containers
+# Enable compression
+zfs set compression=zstd zfs-pool-01
 
-2. Proxmox Backup Server (PBS)
-   - Role: Backup server for PVE
-   - Purpose: Stores backups with deduplication, compression, and optional encryption
-   - Sync: Sends backups to an offsite PBS or remote storage for disaster recovery
+# Create datastore mount point
+mkdir -p /mnt/datastore/main-pbs01-backup
 
-3. ZFS Configuration
---------------------
+# Add datastore to PBS
+proxmox-backup-manager datastore create main-pbs01-backup --path /mnt/datastore/main-pbs01-backup
 
-On Proxmox VE (PVE)
---------------------
-- Create a ZFS pool for storing VMs:
-  zpool create main-pve01-vm raidz /dev/sdX /dev/sdY /dev/sdZ
-  - Pool Name: main-pve01-vm
-  - Use Case: Fast, redundant storage for VM disks
+# Create namespace
+proxmox-backup-manager datastore namespace create main-pbs01-backup-ns --datastore main-pbs01-backup
 
-On Proxmox Backup Server (PBS)
--------------------------------
-- Create a ZFS pool for backup storage:
-  zpool create zfs-pool-01 raidz /dev/sdX /dev/sdY /dev/sdZ
+# ---------- Step 3: Offsite PBS Setup ----------
+# Repeat same setup as onsite PBS
 
-- Create a Datastore on the ZFS pool:
-  - Name: main-pbs01-backup
-  - Mount point: /mnt/datastore/main-pbs01-backup
+# Create ZFS pool for replication storage
+zpool create zfs-pool-remote raidz /dev/sdX /dev/sdY /dev/sdZ
 
-- Enable ZFS compression (recommended):
-  zfs set compression=zstd zfs-pool-01
+# Enable compression
+zfs set compression=zstd zfs-pool-remote
 
-- Create a namespace under the datastore:
-  proxmox-backup-manager datastore namespace create main-pbs01-backup-ns --datastore main-pbs01-backup
+# Create datastore mount point
+mkdir -p /mnt/datastore/main-pbs01-backup
 
-4. Adding PBS Storage to PVE
-----------------------------
-To connect the PBS datastore to PVE:
+# Add datastore to PBS
+proxmox-backup-manager datastore create main-pbs01-backup --path /mnt/datastore/main-pbs01-backup
 
-From the PVE Web GUI:
-- Navigate to: Datacenter > Storage > Add > Proxmox Backup Server
+# Create matching namespace
+proxmox-backup-manager datastore namespace create main-pbs01-backup-ns --datastore main-pbs01-backup
 
-Fill in the following fields:
+# ---------- Step 4: Connect Onsite PBS to Offsite PBS ----------
+# On the onsite PBS Web GUI or via CLI, create sync job
 
-- ID: main-pbs01-backup-ns
-- Server: <PBS-IP-ADDRESS> or hostname
-- Username: root@pam
-- Password: Your PBS root password
-- Datastore: main-pbs01-backup
-- Namespace: main-pbs01-backup-ns
-- Fingerprint:
-  - Copy from PBS Web Dashboard > Access > TLS Certificate > SHA-256 Fingerprint
+# Example command:
+proxmox-backup-manager sync-job create offsite-sync \
+  --remote offsite-pbs \
+  --remote-store main-pbs01-backup \
+  --remote-ns main-pbs01-backup-ns \
+  --store main-pbs01-backup \
+  --ns main-pbs01-backup-ns \
+  --schedule "daily"
 
-Click Add to finalize the connection. Backups from PVE can now be targeted directly to the PBS namespace.
+# Add remote connection config:
+proxmox-backup-manager remote create offsite-pbs \
+  --host 10.10.10.20 \
+  --user root@pam
 
-Backup Workflow
----------------
-1. PVE is scheduled to back up VMs and containers.
-2. Backups are sent to PBS and stored in the datastore main-pbs01-backup, under the namespace main-pbs01-backup-ns.
-3. Backups are incremental, deduplicated, and compressed using ZFS.
-4. PBS is configured to sync backup data to an offsite PBS or remote storage periodically.
+# Run a test sync manually (optional)
+proxmox-backup-client sync offsite-sync
 
-Benefits
---------
-- High-performance VM hosting with local ZFS storage on PVE
-- Reliable and space-efficient backups with PBS using deduplication and compression
-- Data redundancy using RAIDZ on both PVE and PBS sides
-- Clear separation and control using backup namespaces
-- Enhanced security using TLS fingerprint verification during PBS storage setup
-- Offsite synchronization for disaster recovery assurance
+# ---------- Step 5: Add PBS Storage to PVE ----------
+# From PVE Web GUI:
+# Datacenter > Storage > Add > Proxmox Backup Server
 
-Summary
--------
-This complete architecture provides a robust, scalable solution using open-source tools — Proxmox VE and Proxmox Backup Server — 
-combined with ZFS storage and namespace isolation. The setup supports production virtualization, efficient backups, 
-and secure offsite replication for data protection and recovery readiness.| Main Function     | Run VMs and containers         | Backup and restore data             |
-| Type              | Hypervisor / Virtualization    | Backup Solution                     |
-| GUI               | Yes                            | Yes                                 |
-| Backup Support    | Basic (vzdump)                 | Advanced (incremental, encrypted)   |
-| Storage Options   | ZFS, LVM, Ceph, etc.           | Local, remote, encrypted            |
-| Integration       | Works with PBS                 | Designed to back up PVE             |
+# Fill in:
+# ID: main-pbs01-backup-ns
+# Server: 192.168.100.20
+# Username: root@pam
+# Password: (PBS root password)
+# Datastore: main-pbs01-backup
+# Namespace: main-pbs01-backup-ns
+# Fingerprint: (copy from PBS Web UI: Access > TLS Certificates)
 
-Key Difference:
----------------
-- **PVE** is for running workloads (VMs/containers).
-- **PBS** is for protecting those workloads through backups.
+# ---------- Step 6: Create Backup Job in PVE ----------
+# From PVE Web GUI:
+# Datacenter > Backup > Add
 
-They are **designed to work together** for a full virtualization and backup infrastructure.
+# Set:
+# - Storage: main-pbs01-backup-ns
+# - Mode: Snapshot
+# - Compression: zstd
+# - Schedule: daily or weekly
+# - VM/CT: Select all to include
+# - Enable email notification (optional)
 
+# ---------- Step 7: Monitor Backups ----------
+# View backups from:
+# - PBS Web UI > Datastore > main-pbs01-backup > main-pbs01-backup-ns
+# - PVE Web UI > Datacenter > Backup or each VM > Backup tab
 
+# ---------- Step 8: Test Backup and Restore ----------
+# Backup:
+# - Manually trigger from PVE or wait for schedule
 
+# Restore:
+# - From PVE Web UI > VM > Backup > Restore
+# - Or from PBS Web UI > Restore > Select VM/CT > Restore to PVE
 
-
-
-
-
-
-Proxmox Virtualization and Backup Setup
-=======================================
-
-Overview
---------
-This setup describes a data center configuration using Proxmox VE (PVE) for running production workloads 
-and Proxmox Backup Server (PBS) for managing secure backups. ZFS is used on the PBS side with RAIDZ 
-and compression enabled for efficient storage and redundancy. A namespace is created within the 
-datastore to organize backups. Backup data is also synchronized to an offsite location for disaster recovery.
-
-Setup Components
-----------------
-
-1. Proxmox VE (PVE)
-   - Role: Primary virtualization host
-   - Purpose: Runs critical applications and services as VMs or containers
-   - Backups: Configured to send regular backups to PBS
-
-2. Proxmox Backup Server (PBS)
-   - Role: Backup management server
-   - Purpose: Receives, stores, and manages backups from PVE
-   - Storage: Configured with a ZFS pool using RAIDZ and compression
-   - Sync: Backup data is synchronized to an offsite PBS or remote storage for disaster recovery
-
-3. ZFS Configuration on PBS
-   - RAID Level: RAIDZ (for redundancy and performance)
-   - Compression: Enabled (e.g., lz4 or zstd) to reduce disk usage
-   - ZFS Pool: Created and mounted
-     - Example command:
-       ```
-       zpool create zfs-pool-01 raidz /dev/sdX /dev/sdY /dev/sdZ
-       ```
-   - Datastore: Created from the ZFS pool
-     - Example name: `pbs-datastore`
-
-4. Namespace Creation
-   - Purpose: Organize backup data under logical grouping (e.g., node, environment)
-   - Namespace Name: `main-pbs01-backup-ns`
-   - Command:
-     ```
-     proxmox-backup-manager datastore namespace create main-pbs01-backup-ns --datastore pbs-datastore
-     ```
-
-Backup Workflow
----------------
-1. PVE is configured to perform scheduled backups of VMs and containers.
-2. These backups are sent to PBS and stored in the datastore `pbs-datastore` under the namespace `main-pbs01-backup-ns`.
-3. The backups are incremental, deduplicated, and compressed using ZFS.
-4. PBS is configured to sync the stored backups to an offsite PBS or remote storage at scheduled intervals.
-5. This setup ensures local data protection as well as disaster recovery readiness through offsite replication.
-
-Benefits
---------
-- Efficient and secure virtualization platform using PVE
-- Reliable and space-optimized backups using PBS with ZFS
-- Data redundancy through RAIDZ
-- Namespace improves backup organization and access control
-- Offsite backup sync protects against local disasters
-
-Summary
--------
-This Proxmox infrastructure setup provides an enterprise-grade open-source solution for virtualization 
-and backup. It leverages PVE and PBS, integrated with ZFS storage and logical namespace structuring 
-for scalable and secure backup management.
+# ---------- Final Notes ----------
+# - Ensure PBS nodes are time-synced (use NTP)
+# - Regularly test restores
+# - Secure root passwords and access
+# - Use firewall rules or VPN between PVE and PBS nodes
