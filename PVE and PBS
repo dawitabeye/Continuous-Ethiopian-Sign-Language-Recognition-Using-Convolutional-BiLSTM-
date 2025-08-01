@@ -1,55 +1,76 @@
-# Proxmox VE + Onsite PBS + Offsite PBS Setup Guide
-# =================================================
-# Assumptions:
-# - 1 PVE host: IP 192.168.100.10
-# - 1 Onsite PBS: IP 192.168.100.20
-# - 1 Offsite PBS: IP 10.10.10.20
-# - All systems use ZFS with RAIDZ
-# - Datastore name: main-pbs01-backup
-# - Namespace: main-pbs01-backup-ns
+# Proxmox Virtualization + Backup + Offsite Sync Setup
+# ====================================================
+# Setup: 1 PVE + 1 PBS (onsite) + 1 PBS (offsite)
+# With ZFS, RAIDZ, Namespaces, Token Auth, Sync, and Pruning
 
-# ---------- Step 1: Prepare PVE ----------
-# Ensure ZFS pool for VMs exists
+# -------------------------------
+# IP Addresses (Adjust as needed)
+# -------------------------------
+# PVE:           192.168.100.10
+# PBS-Onsite:    192.168.100.20
+# PBS-Offsite:   10.10.10.20
+
+# ---------------------------------------
+# Step 1: Configure ZFS on Proxmox VE
+# ---------------------------------------
 zpool create main-pve01-vm raidz /dev/sdX /dev/sdY /dev/sdZ
 
-# ---------- Step 2: Onsite PBS Setup ----------
-# Create ZFS pool for backup storage
+# -----------------------------------------
+# Step 2: Configure ZFS + PBS-Onsite
+# -----------------------------------------
 zpool create zfs-pool-01 raidz /dev/sdX /dev/sdY /dev/sdZ
-
-# Enable compression
 zfs set compression=zstd zfs-pool-01
 
-# Create datastore mount point
+# Auto-mount ZFS at boot (optional, but recommended)
+zpool set cachefile=/etc/zfs/zpool.cache zfs-pool-01
+update-initramfs -u
+
+# Create datastore directory
 mkdir -p /mnt/datastore/main-pbs01-backup
 
-# Add datastore to PBS
+# Create datastore
 proxmox-backup-manager datastore create main-pbs01-backup --path /mnt/datastore/main-pbs01-backup
 
 # Create namespace
 proxmox-backup-manager datastore namespace create main-pbs01-backup-ns --datastore main-pbs01-backup
 
-# ---------- Step 3: Offsite PBS Setup ----------
-# Repeat same setup as onsite PBS
+# Enable NTP
+timedatectl set-ntp true
+systemctl restart systemd-timesyncd
 
-# Create ZFS pool for replication storage
+# ----------------------------------------
+# Step 3: Configure ZFS + PBS-Offsite
+# ----------------------------------------
 zpool create zfs-pool-remote raidz /dev/sdX /dev/sdY /dev/sdZ
-
-# Enable compression
 zfs set compression=zstd zfs-pool-remote
+zpool set cachefile=/etc/zfs/zpool.cache zfs-pool-remote
+update-initramfs -u
 
-# Create datastore mount point
 mkdir -p /mnt/datastore/main-pbs01-backup
 
-# Add datastore to PBS
 proxmox-backup-manager datastore create main-pbs01-backup --path /mnt/datastore/main-pbs01-backup
 
-# Create matching namespace
 proxmox-backup-manager datastore namespace create main-pbs01-backup-ns --datastore main-pbs01-backup
 
-# ---------- Step 4: Connect Onsite PBS to Offsite PBS ----------
-# On the onsite PBS Web GUI or via CLI, create sync job
+timedatectl set-ntp true
+systemctl restart systemd-timesyncd
 
-# Example command:
+# --------------------------------------
+# Step 4: Secure Connection (VPN Recommended)
+# --------------------------------------
+# (Optional but STRONGLY recommended)
+# Setup WireGuard/OpenVPN tunnel between onsite and offsite PBS
+# OR setup SSH tunnel with autossh if public IP is used (not recommended)
+
+# --------------------------------------
+# Step 5: Configure Remote Access on PBS-Onsite
+# --------------------------------------
+# Create remote config (to connect to offsite PBS)
+proxmox-backup-manager remote create offsite-pbs \
+  --host 10.10.10.20 \
+  --user root@pam
+
+# Create scheduled sync job (Push model)
 proxmox-backup-manager sync-job create offsite-sync \
   --remote offsite-pbs \
   --remote-store main-pbs01-backup \
@@ -58,54 +79,95 @@ proxmox-backup-manager sync-job create offsite-sync \
   --ns main-pbs01-backup-ns \
   --schedule "daily"
 
-# Add remote connection config:
-proxmox-backup-manager remote create offsite-pbs \
-  --host 10.10.10.20 \
-  --user root@pam
+# Test sync job manually
+proxmox-backup-manager sync-job run offsite-sync
 
-# Run a test sync manually (optional)
-proxmox-backup-client sync offsite-sync
+# ---------------------------------------
+# Step 6: Optional - Token-Based Access
+# ---------------------------------------
+# Create API token (safer than using root password)
+proxmox-backup-manager user token create root@pam pve-token --privs Datastore.Allocate,Datastore.Backup
 
-# ---------- Step 5: Add PBS Storage to PVE ----------
-# From PVE Web GUI:
-# Datacenter > Storage > Add > Proxmox Backup Server
+# Get PBS TLS fingerprint (for secure registration)
+openssl x509 -noout -fingerprint -sha256 -in /etc/proxmox-backup/proxmox-backup.pem
 
-# Fill in:
-# ID: main-pbs01-backup-ns
-# Server: 192.168.100.20
-# Username: root@pam
-# Password: (PBS root password)
-# Datastore: main-pbs01-backup
-# Namespace: main-pbs01-backup-ns
-# Fingerprint: (copy from PBS Web UI: Access > TLS Certificates)
+# --------------------------------------
+# Step 7: Add PBS Storage in PVE
+# --------------------------------------
+# GUI: Datacenter > Storage > Add > Proxmox Backup Server
 
-# ---------- Step 6: Create Backup Job in PVE ----------
-# From PVE Web GUI:
-# Datacenter > Backup > Add
+# OR CLI:
+pvesh create /storage \
+  -type pbs \
+  -storage main-pbs01-backup-ns \
+  -server 192.168.100.20 \
+  -username 'root@pam!pve-token' \
+  -password 'your_token_string_here' \
+  -fingerprint 'XX:XX:XX:...' \
+  -datastore main-pbs01-backup \
+  -namespace main-pbs01-backup-ns \
+  -content backup
 
-# Set:
+# --------------------------------------
+# Step 8: Create Backup Job on PVE
+# --------------------------------------
+# GUI: Datacenter > Backup > Add
+
+# Settings:
 # - Storage: main-pbs01-backup-ns
-# - Mode: Snapshot
+# - Mode: snapshot
 # - Compression: zstd
-# - Schedule: daily or weekly
-# - VM/CT: Select all to include
-# - Enable email notification (optional)
+# - Schedule: daily (e.g., 02:00)
+# - VMs: Select all or specify
+# - Email Notification: optional
 
-# ---------- Step 7: Monitor Backups ----------
-# View backups from:
-# - PBS Web UI > Datastore > main-pbs01-backup > main-pbs01-backup-ns
-# - PVE Web UI > Datacenter > Backup or each VM > Backup tab
+# ---------------------------------------
+# Step 9: Create Prune Job on PBS-Onsite
+# ---------------------------------------
+proxmox-backup-manager prune-job create prune-old \
+  --datastore main-pbs01-backup \
+  --ns main-pbs01-backup-ns \
+  --keep-daily 7 \
+  --keep-weekly 4 \
+  --keep-monthly 3 \
+  --schedule "daily"
 
-# ---------- Step 8: Test Backup and Restore ----------
-# Backup:
-# - Manually trigger from PVE or wait for schedule
+# ---------------------------------------
+# Step 10: (Optional) Role-Based User
+# ---------------------------------------
+# Create user for PVE to access PBS
+proxmox-backup-manager user add pveuser@pbs
+proxmox-backup-manager acl update /datastore/main-pbs01-backup \
+  --auth-id pveuser@pbs --privs Datastore.Backup
 
-# Restore:
-# - From PVE Web UI > VM > Backup > Restore
-# - Or from PBS Web UI > Restore > Select VM/CT > Restore to PVE
+# ---------------------------------------
+# Step 11: Configure Firewall / Ports
+# ---------------------------------------
+# Open these ports between nodes:
+# - Port 8007: PBS Web/API
+# - Port 22: For sync/SSH
+# - VPN ports if WireGuard/OpenVPN used
 
-# ---------- Final Notes ----------
-# - Ensure PBS nodes are time-synced (use NTP)
-# - Regularly test restores
-# - Secure root passwords and access
-# - Use firewall rules or VPN between PVE and PBS nodes
+# ---------------------------------------
+# Step 12: Monitoring and Validation
+# ---------------------------------------
+# Check PBS logs:
+journalctl -u proxmox-backup-proxy
+
+# Test backup:
+# - GUI > VM > Backup > Backup Now
+
+# Test restore:
+# - GUI > VM > Backup > Restore
+# OR
+# - PBS Web UI > Restore
+
+# ---------------------------------------
+# Final Notes:
+# ---------------------------------------
+# ✔ Always test restore after setup
+# ✔ Enable notifications via email (configure /etc/proxmox-backup/email.cfg)
+# ✔ Protect all PBS access (disable root password login if possible)
+# ✔ Always sync NTP across nodes
+# ✔ Document your sync + prune + backup schedules
+# ✔ Consider using HA PVE cluster if multiple PVE nodes are planned
