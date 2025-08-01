@@ -1,0 +1,49 @@
+PVE vs PBS (Proxmox VE vs Proxmox Backup Server)
+=================================================
+
+1. PVE – Proxmox Virtual Environment
+------------------------------------
+- Full Name: Proxmox VE (Virtual Environment)
+- Type: Server Virtualization Platform
+- Purpose: To run and manage virtual machines (VMs) and Linux containers (LXC)
+- Key Features:
+  - KVM-based virtual machines
+  - LXC containers
+  - Web-based GUI for full control
+  - Storage management (ZFS, LVM, Ceph, etc.)
+  - High Availability (HA) clustering
+  - Integrated firewall and networking
+  - Built-in support for backups (vzdump)
+- Use Case: Hosting and managing production workloads
+
+2. PBS – Proxmox Backup Server
+------------------------------
+- Full Name: Proxmox Backup Server
+- Type: Backup and Restore Solution
+- Purpose: To back up and restore VMs, containers, and physical hosts (via clients)
+- Key Features:
+  - Incremental, deduplicated, and compressed backups
+  - High-speed backup/restore operations
+  - Supports encryption for secure backups
+  - Web GUI and command-line support
+  - Works seamlessly with PVE for automated backups
+  - Supports remote and offsite backup storage
+- Use Case: Backup and disaster recovery for PVE and other systems
+
+Comparison Summary
+------------------
+| Feature           | PVE (Proxmox VE)              | PBS (Proxmox Backup Server)         |
+|-------------------|-------------------------------|-------------------------------------|
+| Main Function     | Run VMs and containers         | Backup and restore data             |
+| Type              | Hypervisor / Virtualization    | Backup Solution                     |
+| GUI               | Yes                            | Yes                                 |
+| Backup Support    | Basic (vzdump)                 | Advanced (incremental, encrypted)   |
+| Storage Options   | ZFS, LVM, Ceph, etc.           | Local, remote, encrypted            |
+| Integration       | Works with PBS                 | Designed to back up PVE             |
+
+Key Difference:
+---------------
+- **PVE** is for running workloads (VMs/containers).
+- **PBS** is for protecting those workloads through backups.
+
+They are **designed to work together** for a full virtualization and backup infrastructure.
