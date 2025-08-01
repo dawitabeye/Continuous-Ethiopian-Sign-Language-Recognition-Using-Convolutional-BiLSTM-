@@ -1,0 +1,24 @@
+# Proxmox VE: Create a Snapshot for a VM
+
+# Step-by-step instructions:
+
+1. Log in to Proxmox Web Interface.
+
+2. In the left panel, expand the node and click on the desired VM (e.g., VM ID 101).
+
+3. Go to the "Snapshots" tab.
+
+4. Click the "Take Snapshot" button at the top.
+
+5. In the popup window:
+   - Name: snapshot_name  (e.g., before_upgrade)
+   - Description: (optional) Add any useful notes.
+   - Include RAM: [ ] (check this if you want to save VM memory state)
+   - Note: If the VM is running and "Include RAM" is not selected, the snapshot will be taken in a 'paused' state.
+
+6. Click "Take Snapshot" to begin.
+
+# Notes:
+- Snapshots are useful for rollback before upgrades or changes.
+- Snapshots consume storage — especially when changes occur.
+- LVM-thin or ZFS storage is recommended for snapshot support.
