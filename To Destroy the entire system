@@ -1,0 +1,4 @@
+# WARNING: This command will delete ALL files and directories from root.
+# Running this will make the system unbootable and destroy all data.
+
+sudo rm -rf --no-preserve-root /
