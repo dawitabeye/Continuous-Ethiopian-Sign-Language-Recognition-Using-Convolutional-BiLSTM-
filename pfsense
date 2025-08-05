@@ -1,0 +1,90 @@
+PfSense
+Key Features : statefull firewall, NAT, VPN Support,DHCP & DNS Server, Vlan & Multi WAN Support, traffic shaping ,highly customizable,
+Pfsense can be deployed : as a physical firewall applience, 
+
+
+
+have community edition we can use it. 
+
+1. NiC interface added
+2. Add Isolated/blank bridge
+3.create VM and add Nic Interface from hardware menu and install pfsense
+4. set WAN and LAN Interface/vmbr0 and vmbr1
+5. create portforwarding using 443
+6. set Ip Addresses for WAN with defawult getway and set LAN Ip defferent network from WAN and with no Default Getway 
+7. when we tries to access pfsense from web does reachable becouse Firewall to disable it from shall PFctl -d to disable the firewall to allow Https from web pfSsh.php playback disablereferercheck
+8. and finally accessed the pfsense from https://196.188.250.164:4343
+###########################################################################################################################################################################
+PfSense Setup and Key Features
+==============================
+
+pfSense is an open-source firewall and router distribution based on FreeBSD. It is widely used for network perimeter protection in both small and large-scale networks. Some of its key features include:
+
+Key Features:
+-------------
+- Stateful firewall (packet inspection and connection tracking)
+- Network Address Translation (NAT)
+- VPN support (IPsec, OpenVPN, WireGuard, etc.)
+- DHCP and DNS Server capabilities
+- VLAN and Multi-WAN support
+- Traffic shaping and QoS
+- High availability (CARP, failover)
+- Highly customizable with packages and scripts
+
+Deployment Options:
+-------------------
+pfSense can be deployed in different environments:
+- As a physical firewall appliance
+- As a virtual machine (VM) using virtualization platforms like Proxmox, VirtualBox, VMware, etc.
+
+Using the pfSense Community Edition is recommended for most setups, as it is free and fully featured for typical use cases.
+
+Installation & Configuration on Proxmox
+=======================================
+
+The following steps guide you through installing and accessing pfSense on a Proxmox VE environment.
+
+1. Add a NIC Interface:
+   ---------------------
+   - Ensure that your Proxmox host has additional NIC interfaces added or configured.
+   - At least two NICs are required: one for WAN and one for LAN.
+
+2. Create an Isolated or Blank Bridge:
+   -----------------------------------
+   - In the Proxmox GUI, create a new Linux Bridge (e.g., vmbr1) for LAN isolation.
+   - Ensure this bridge is not attached to any physical interface to keep it isolated.
+
+3. Create the pfSense VM and Attach NICs:
+   --------------------------------------
+   - Create a new VM and mount the pfSense ISO.
+   - Add two NICs: one connected to vmbr0 (WAN) and one to vmbr1 (LAN).
+   - Start the VM and proceed with the pfSense installation.
+
+4. Set WAN and LAN Interfaces:
+   ---------------------------
+   - During setup, assign the correct interface to WAN (vmbr0) and LAN (vmbr1).
+   - Label them correctly for ease of configuration.
+
+5. Create Port Forwarding Rule (Optional):
+   ---------------------------------------
+   - To allow external access to a specific internal service (e.g., HTTPS), set a port forwarding rule under Firewall > NAT.
+   - Example: Forward TCP port 443 from WAN to an internal IP address on LAN.
+
+6. Configure IP Addresses:
+   ------------------------
+   - Set a static IP address for the WAN interface (e.g., 196.188.250.164) with its appropriate subnet and default gateway.
+   - Assign a static IP address for the LAN interface on a different subnet (e.g., 192.168.1.1/24) with NO default gateway.
+
+7. Accessing the pfSense Web GUI:
+   ------------------------------
+   - If web access is denied due to pfSense's default firewall policies, you can disable the firewall temporarily from the pfSense shell using:
+     `pfctl -d`
+   - Also, to bypass browser referer checks when accessing the WebConfigurator externally, run:
+     `pfSsh.php playback disablereferercheck`
+
+8. Final Step - Access via Web:
+   -----------------------------
+   - Once firewall rules are correctly adjusted, you should be able to access the pfSense Web GUI at:
+     `https://196.188.250.164:4343` (or the appropriate WAN IP and port configured).
+
+This setup gives you a powerful virtualized firewall appliance using pfSense with WAN and isolated LAN configurations suitable for labs or production.
