@@ -1,0 +1,9 @@
+1. install PVE 
+1.1. Setup ZFS, create VM and install ubuntu server 18.04
+1.2. 
+2. install PBS 
+2.1. create ZFS 
+2.2. create Proxmox Backup server on Storage 
+2.2.1 ID, IP, Username and password, datastore from PBS pool name "DPOOL" mine and Namespace from PBS main backup "Main-PVE01-Backup"
+and give PBS Fingerprint
+2.2. create Namespace MAIN-PVE01-Backup  and DR-PVE01-Backup
