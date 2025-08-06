@@ -6,4 +6,89 @@
 2.2. create Proxmox Backup server on Storage 
 2.2.1 ID, IP, Username and password, datastore from PBS pool name "DPOOL" mine and Namespace from PBS main backup "Main-PVE01-Backup"
 and give PBS Fingerprint
-2.2. create Namespace MAIN-PVE01-Backup  and DR-PVE01-Backup
+2.2. create Namespace MAIN-PVE01-Backup (backup from main DBU)  and DR-PVE01-Backup (from Wingu backup)
+
+##################################################################################################################################
+
+ONSITE BACKUP SETUP – STEP-BY-STEP
+==================================
+
+🖥️ Hardware Overview
+--------------------
+Two HPE DL580 Servers:
+1. Server 1: main-dbu-pve – Runs Proxmox VE (PVE), VMs, and acts as the hypervisor.
+2. Server 2: main-dbu-pbs – Runs Proxmox Backup Server (PBS).
+
+1. INSTALLATION ON MAIN SERVER (main-dbu-pve)
+---------------------------------------------
+1.1 Install Proxmox VE
+    - Install from ISO.
+    - Select ZFS RAIDZ2 as storage backend.
+    - Create RAID2 pool during setup.
+
+1.2 Create VM Storage
+    - Datacenter > main-dbu-pve > Disks > ZFS
+    - Create pool: main-pve01-vm
+
+1.3 Create VMs (Ubuntu 18.04)
+    - Proxmox GUI > Create VM
+    - Use main-pve01-vm as storage.
+    - Install Ubuntu 18.04 Server.
+
+2. STORAGE CONFIGURATION ON PVE
+-------------------------------
+2.1 Create Backup ZFS Pool
+    - Create new ZFS pool: main-pve01-backup
+
+2.2 Add Storage in Proxmox GUI
+    - Datacenter > Storage > Add > Directory
+    - ID: main-pve01-backup
+    - Content: VZDump backup file
+    - Directory: /mnt/main-pve01-backup
+
+3. INSTALL & CONFIGURE PBS (main-dbu-pbs)
+-----------------------------------------
+3.1 Install PBS
+    - Install PBS on second HPE DL580
+    - Use RAIDZ2 pool: raid2-pool
+
+3.2 Create Datastore
+    - PBS GUI > Datastore > Add
+    - ID: main-pbs01-backup
+    - Path: /mnt/raid2-pool/main-pbs01-backup
+
+3.3 Create Namespaces
+    - Under main-pbs01-backup, create:
+        • MAIN-PVE01-Backup
+        • DR-PVE01-Backup
+
+4. CONFIGURE PBS ON PVE SIDE
+----------------------------
+4.1 Add PBS Storage
+    - Datacenter > Storage > Add > Proxmox Backup Server
+    - ID: pbs-backup
+    - Server IP: [PBS IP]
+    - User: root@pam
+    - Password: [your_password]
+    - Fingerprint: get from PBS via CLI
+    - Datastore: main-pbs01-backup
+    - Namespace: MAIN-PVE01-Backup
+
+5. VALIDATION AND BACKUP TEST
+-----------------------------
+5.1 Manual Backup
+    - PVE GUI > VM > Backup > Backup Now
+    - Select pbs-backup as storage
+
+5.2 Verify on PBS
+    - PBS GUI > Datastore > main-pbs01-backup > MAIN-PVE01-Backup
+
+GENERAL NOTES
+-------------
+- Backups go to:
+    • Local ZFS: main-pve01-backup
+    • Remote PBS: main-pbs01-backup
+- Namespaces organize backup sources.
+- Use scheduled jobs to automate backup.
+- Use sync jobs to replicate offsite.
+
